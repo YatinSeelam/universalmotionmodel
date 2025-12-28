@@ -1,0 +1,208 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rethink+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --gradient-color: #8350e8;
+  --sparkles-color: #8350e8;
+}
+
+.dark {
+  --gradient-color: #8350e8;
+  --sparkles-color: #ffffff;
+}
+
+html {
+  overflow-y: scroll;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+html::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: 'Archivo', 'Helvetica Neue', Helvetica, Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-y: scroll;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  letter-spacing: -0.01em;
+}
+
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Noise texture overlay */
+.noise-overlay {
+  position: relative;
+}
+
+.noise-overlay::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='6' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Gradient text utilities - really dark on top, less dark on bottom */
+.gradient-text {
+  background: linear-gradient(180deg, #0f0519 0%, #1a0b2e 20%, #2d1b4e 40%, #4c1d95 60%, #5b21b6 80%, #6d28d9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-hero {
+  background: linear-gradient(180deg, #0f0519 0%, #1a0b2e 25%, #2d1b4e 50%, #4c1d95 75%, #5b21b6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-light {
+  background: linear-gradient(180deg, #2d1b4e 0%, #4c1d95 50%, #5b21b6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Background gradients with noise - top dark to bottom light */
+.bg-gradient-light {
+  background: linear-gradient(180deg, #4c1d95 0%, #5b21b6 15%, #6d28d9 30%, #7c3aed 50%, #8b5cf6 70%, #a78bfa 85%, #e9d5ff 100%);
+  position: relative;
+}
+
+.bg-gradient-light::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bg-gradient-hero {
+  background: linear-gradient(180deg, #050210 0%, #050210 25%, #080410 50%, #0a0514 75%, #0f0519 100%);
+  position: relative;
+}
+
+.bg-gradient-hero::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='6' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Fuzzy circular gradient at bottom center - half circle with top edge at bottom of page */
+.bg-radial-gradient-purple {
+  background: radial-gradient(ellipse 100% 60% at center, rgba(196, 181, 253, 1) 0%, rgba(167, 139, 250, 0.9) 18%, rgba(139, 92, 246, 0.7) 35%, rgba(109, 40, 217, 0.5) 50%, rgba(91, 33, 182, 0.35) 65%, rgba(76, 29, 149, 0.2) 80%, rgba(45, 27, 78, 0.1) 95%, transparent 100%);
+  z-index: 0;
+  filter: blur(150px);
+  -webkit-filter: blur(90px);
+  border-radius: 50%;
+}
+
+/* Additional fuzzy overlay for bottom half of hero section */
+.hero-bottom-fuzz {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: radial-gradient(ellipse 120% 80% at center bottom, rgba(196, 181, 253, 0.7) 0%, rgba(167, 139, 250, 0.6) 20%, rgba(139, 92, 246, 0.5) 40%, rgba(109, 40, 217, 0.4) 60%, rgba(91, 33, 182, 0.3) 80%, transparent 100%);
+  pointer-events: none;
+  z-index: 1;
+  filter: blur(120px);
+  -webkit-filter: blur(120px);
+  mix-blend-mode: overlay;
+}
+
+/* Subtle purple glow shadow at bottom of hero section - extends to next section */
+.hero-glow-bottom {
+  position: relative;
+}
+
+.hero-glow-bottom::after {
+  content: '';
+  position: absolute;
+  bottom: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 1600px;
+  height: 120px;
+  background: radial-gradient(ellipse 100% 100% at center, rgba(139, 92, 246, 0.4) 0%, rgba(109, 40, 217, 0.3) 20%, rgba(91, 33, 182, 0.2) 40%, rgba(76, 29, 149, 0.12) 60%, rgba(45, 27, 78, 0.06) 80%, transparent 100%);
+  pointer-events: none;
+  z-index: 5;
+  filter: blur(60px);
+  -webkit-filter: blur(60px);
+  border-radius: 50%;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Loader animation for SplineScene */
+.loader {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(139, 92, 246, 0.2);
+  border-radius: 50%;
+  border-top-color: #8b5cf6;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Spotlight animation */
+@keyframes spotlight {
+  0% {
+    opacity: 0;
+    transform: translate(-72%, -62%) scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -40%) scale(1);
+  }
+}
+
+.animate-spotlight {
+  animation: spotlight 2s ease 0.75s 1 forwards;
+}
