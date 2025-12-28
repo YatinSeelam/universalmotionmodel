@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { WorkerDashboardNav } from '@/components/DashboardNav'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -34,14 +35,14 @@ interface JobDetail {
 
 function StatusBadge({ status }: { status: string }) {
   const colors = {
-    open: 'bg-yellow-100 text-yellow-800',
-    claimed: 'bg-blue-100 text-blue-800',
-    submitted: 'bg-purple-100 text-purple-800',
-    accepted: 'bg-green-100 text-green-800',
-    rejected: 'bg-red-100 text-red-800',
+    open: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+    claimed: 'bg-blue-50 text-blue-700 border-blue-200',
+    submitted: 'bg-purple-50 text-purple-700 border-purple-200',
+    accepted: 'bg-green-50 text-green-700 border-green-200',
+    rejected: 'bg-red-50 text-red-700 border-red-200',
   }
   return (
-    <span className={`text-xs px-2 py-1 rounded font-medium ${colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800'}`}>
+    <span className={`text-xs px-2 py-0.5 rounded font-medium border ${colors[status as keyof typeof colors] || 'bg-slate-50 text-slate-600 border-slate-200'}`} style={{ fontFamily: "'Archivo', sans-serif" }}>
       {status}
     </span>
   )
@@ -59,7 +60,6 @@ export default function JobDetailPage() {
   const [submitting, setSubmitting] = useState(false)
   const [showFixForm, setShowFixForm] = useState(false)
   
-  // Fix form state
   const [durationSec, setDurationSec] = useState(8)
   const [hz, setHz] = useState(20)
   const [fixVideo, setFixVideo] = useState<File | null>(null)
@@ -71,7 +71,6 @@ export default function JobDetailPage() {
   }, [jobId])
 
   useEffect(() => {
-    // Auto-seek to failure time when video loads
     if (videoRef.current && job?.episode.failure_time_sec !== null && job?.episode.failure_time_sec !== undefined) {
       const video = videoRef.current
       const handleLoadedMetadata = () => {
@@ -97,9 +96,7 @@ export default function JobDetailPage() {
   const handleClaim = async () => {
     setClaiming(true)
     try {
-      const res = await fetch(`${API_URL}/api/jobs/${jobId}/claim`, {
-        method: 'POST',
-      })
+      const res = await fetch(`${API_URL}/api/jobs/${jobId}/claim`, { method: 'POST' })
       if (res.ok) {
         fetchJob()
       }
@@ -121,13 +118,12 @@ export default function JobDetailPage() {
     setSubmitting(true)
 
     try {
-      // Build meta_json internally
       const meta_json = JSON.stringify({
         task_id: job!.task_id,
         hz: hz,
         steps: steps,
         duration_sec: durationSec,
-        success: true, // Always true for fixes
+        success: true,
       })
 
       const formData = new FormData()
@@ -142,9 +138,19 @@ export default function JobDetailPage() {
       })
 
       if (res.ok) {
+        const data = await res.json()
+        const isAccepted = data.job?.status === 'accepted'
+        
+        if (isAccepted) {
+          alert('✓ Fix approved! Payment and quality score updated.')
+        } else {
+          alert('Fix submitted. Awaiting review.')
+        }
+        
         router.push('/work/queue')
       } else {
-        alert('Failed to submit fix')
+        const errorData = await res.json().catch(() => ({}))
+        alert(errorData.detail || 'Failed to submit fix')
       }
     } catch (error) {
       console.error('Failed to submit fix:', error)
@@ -156,9 +162,15 @@ export default function JobDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <p className="text-gray-500">Loading...</p>
+      <div className="min-h-screen bg-white">
+        <WorkerDashboardNav />
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-slate-600" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Loading...</p>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -166,9 +178,10 @@ export default function JobDetailPage() {
 
   if (!job) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <p className="text-gray-500">Job not found</p>
+      <div className="min-h-screen bg-white">
+        <WorkerDashboardNav />
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <p className="text-slate-600" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Job not found</p>
         </div>
       </div>
     )
@@ -179,43 +192,37 @@ export default function JobDetailPage() {
   const markerPositionPct = failureTime !== null && duration > 0 ? (failureTime / duration) * 100 : 0
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Job Detail</h1>
-          <Link href="/work/queue" className="text-blue-600 hover:underline">← Back to Queue</Link>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="mb-4 flex items-center gap-4">
-            <div>
-              <span className="text-sm font-medium text-gray-500">Status:</span>
-              <span className="ml-2">
-                <StatusBadge status={job.status} />
-              </span>
-            </div>
+    <div className="min-h-screen bg-white">
+      <WorkerDashboardNav />
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <Link href="/work/queue" className="text-xs text-slate-500 hover:text-[#8350e8] mb-1.5 inline-block" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>
+              ← Back to Queue
+            </Link>
+            <h1 className="text-xl font-medium text-slate-900 mb-1" style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}>Job Detail</h1>
+            <p className="text-sm text-slate-500" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Task: {job.task_id}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <StatusBadge status={job.status} />
             {job.lab_name && (
-              <div>
-                <span className="text-sm font-medium text-gray-500">Lab:</span>
-                <span className="ml-2 text-sm text-gray-700">{job.lab_name}</span>
-              </div>
-            )}
-            {job.claimed_by_worker_name && (
-              <div>
-                <span className="text-sm font-medium text-gray-500">Claimed by:</span>
-                <span className="ml-2 text-sm text-gray-700">{job.claimed_by_worker_name}</span>
-              </div>
+              <span className="text-xs px-2 py-0.5 bg-slate-50 text-slate-700 rounded border border-slate-200" style={{ fontFamily: "'Archivo', sans-serif" }}>
+                {job.lab_name}
+              </span>
             )}
           </div>
+        </div>
 
+        <div className="bg-white border border-slate-200/60 rounded-lg p-5 mb-4">
           {job.video_url ? (
-            <div className="mb-6">
+            <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-lg font-semibold">Replay Video</h2>
+                <h2 className="text-sm font-semibold text-slate-900" style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}>Replay Video</h2>
                 {failureTime !== null && (
                   <button
                     onClick={jumpToFailure}
-                    className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                    className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors"
+                    style={{ fontFamily: "'Archivo', sans-serif" }}
                   >
                     Jump to Failure
                   </button>
@@ -226,113 +233,77 @@ export default function JobDetailPage() {
                   ref={videoRef}
                   src={job.video_url}
                   controls
-                  className="w-full rounded-lg border"
-                  onError={(e) => {
-                    console.error('Video load error:', e)
-                  }}
-                >
-                  Your browser does not support the video tag.
-                </video>
+                  className="w-full rounded-lg border border-slate-200/60"
+                />
                 {failureTime !== null && duration > 0 && (
-                  <div className="mt-2 relative h-2 bg-gray-200 rounded-full">
+                  <div className="mt-2 relative h-1.5 bg-slate-200 rounded-full">
                     <div
                       className="absolute top-0 bottom-0 w-0.5 bg-red-600 z-10"
                       style={{ left: `${markerPositionPct}%` }}
                     />
-                    <div className="absolute top-0 left-0 text-xs text-red-600 mt-3" style={{ left: `${markerPositionPct}%`, transform: 'translateX(-50%)' }}>
-                      Failure at {failureTime.toFixed(1)}s
+                    <div className="absolute top-0 left-0 text-xs text-red-600 mt-2" style={{ left: `${markerPositionPct}%`, transform: 'translateX(-50%)' }}>
+                      {failureTime.toFixed(1)}s
                     </div>
                   </div>
                 )}
               </div>
-              {failureTime !== null && (
-                <p className="text-xs text-gray-500 mt-2">
-                  Failure marker at {failureTime.toFixed(1)}s
-                </p>
-              )}
             </div>
           ) : (
-            <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm text-yellow-800">
-                ⚠️ No video available for this episode. This may be a test episode or the video was not uploaded.
+            <div className="mb-4 bg-yellow-50/50 border border-yellow-200/60 rounded-lg p-4">
+              <p className="text-sm text-yellow-800" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>
+                No video available
               </p>
             </div>
           )}
 
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-3">What Failed</h2>
-            <div className="bg-gray-50 rounded-lg p-4">
-              <p className="text-sm mb-2">
-                <span className="font-medium">Failure Reason:</span>{' '}
-                {job.episode.failure_reason || 'N/A'}
-              </p>
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-slate-900 mb-2" style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}>Failure Details</h2>
+            <div className="bg-slate-50/50 border border-slate-200/60 rounded-lg p-3 space-y-1.5 text-sm">
+              <div>
+                <span className="text-slate-500" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Failure Reason:</span>
+                <p className="text-slate-900 mt-0.5" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>{job.episode.failure_reason || 'N/A'}</p>
+              </div>
               {failureTime !== null && (
-                <p className="text-sm mb-2">
-                  <span className="font-medium">Failure Time:</span>{' '}
-                  {failureTime.toFixed(1)}s
-                </p>
+                <div>
+                  <span className="text-slate-500" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Failure Time:</span>
+                  <p className="text-slate-900 mt-0.5" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>{failureTime.toFixed(1)}s</p>
+                </div>
               )}
-              <p className="text-sm mb-2">
-                <span className="font-medium">Duration:</span> {job.episode.duration_sec.toFixed(1)}s
-              </p>
-              <p className="text-sm">
-                <span className="font-medium">Quality Score:</span> {job.episode.quality_score}
-              </p>
+              <div>
+                <span className="text-slate-500" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Duration:</span>
+                <p className="text-slate-900 mt-0.5" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>{job.episode.duration_sec.toFixed(1)}s</p>
+              </div>
             </div>
           </div>
 
           {(job.status === 'open' || job.status === 'claimed') && (
-            <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="text-md font-semibold text-blue-900 mb-2">What to do</h3>
-              <p className="text-sm text-blue-800 mb-3">
-                {job.video_url 
-                  ? "Watch the replay above and identify why the robot failed. Your goal is to create a fix that succeeds where this episode failed."
-                  : "Review the failure information above and identify why the robot failed. Your goal is to create a fix that succeeds where this episode failed."
-                }
-              </p>
-              <div className="bg-white rounded p-3 mb-2">
-                <p className="text-sm font-medium text-gray-900 mb-1">Goal:</p>
-                <p className="text-sm text-gray-700">
-                  Submit a successful episode that completes the same task without the failure shown above.
-                </p>
-              </div>
-              <div className="bg-white rounded p-3">
-                <p className="text-sm font-medium text-gray-900 mb-1">Requirements:</p>
-                <ul className="text-sm text-gray-700 list-disc list-inside space-y-1">
-                  <li>Fix must have <span className="font-semibold">success: true</span></li>
-                  <li>Fix must complete in <span className="font-semibold">under 10 seconds</span></li>
-                  <li>Upload meta.json and video.mp4 of your fix</li>
-                </ul>
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-4">
-            {job.status === 'open' && (
-              <button
-                onClick={handleClaim}
-                disabled={claiming}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
-              >
-                {claiming ? 'Claiming...' : 'Claim Job'}
-              </button>
-            )}
-            {(job.status === 'open' || job.status === 'claimed') && (
+            <div className="flex gap-3">
+              {job.status === 'open' && (
+                <button
+                  onClick={handleClaim}
+                  disabled={claiming}
+                  className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 font-medium transition-colors"
+                  style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}
+                >
+                  {claiming ? 'Claiming...' : 'Claim Job'}
+                </button>
+              )}
               <button
                 onClick={() => setShowFixForm(!showFixForm)}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
+                style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}
               >
                 {showFixForm ? 'Cancel' : 'Submit Fix'}
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {showFixForm && (
-            <form onSubmit={handleSubmitFix} className="mt-6 border-t pt-6">
-              <h3 className="text-lg font-semibold mb-4">Submit Fix</h3>
-              <div className="space-y-4">
+            <form onSubmit={handleSubmitFix} className="mt-5 pt-5 border-t border-slate-200/60">
+              <h3 className="text-sm font-semibold text-slate-900 mb-4" style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}>Submit Fix</h3>
+              <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5" style={{ fontFamily: "'Archivo', sans-serif" }}>
                     Duration (seconds) *
                   </label>
                   <input
@@ -342,11 +313,12 @@ export default function JobDetailPage() {
                     value={durationSec}
                     onChange={(e) => setDurationSec(parseFloat(e.target.value) || 8)}
                     required
-                    className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    className="w-full border border-slate-300/60 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8350e8]/20 focus:border-[#8350e8]"
+                    style={{ fontFamily: "'Rethink Sans', sans-serif" }}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5" style={{ fontFamily: "'Archivo', sans-serif" }}>
                     Control Frequency (Hz) *
                   </label>
                   <input
@@ -355,43 +327,38 @@ export default function JobDetailPage() {
                     value={hz}
                     onChange={(e) => setHz(parseInt(e.target.value) || 20)}
                     required
-                    className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    className="w-full border border-slate-300/60 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8350e8]/20 focus:border-[#8350e8]"
+                    style={{ fontFamily: "'Rethink Sans', sans-serif" }}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Steps (auto-calculated)
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5" style={{ fontFamily: "'Archivo', sans-serif" }}>
+                    Steps
                   </label>
-                  <input
-                    type="number"
-                    value={steps}
-                    readOnly
-                    className="w-full border rounded-lg px-4 py-2 bg-gray-50 text-gray-600"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Steps = Duration × Hz = {durationSec} × {hz} = {steps}
+                  <div className="w-full border border-slate-300/60 rounded-lg px-4 py-2 bg-slate-50/50 text-slate-600 text-sm" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>
+                    {steps}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>
+                    {durationSec} × {hz} = {steps}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5" style={{ fontFamily: "'Archivo', sans-serif" }}>
                     Fix Video (optional)
                   </label>
                   <input
                     type="file"
                     accept="video/mp4"
                     onChange={(e) => setFixVideo(e.target.files?.[0] || null)}
-                    className="w-full border rounded-lg px-4 py-2"
+                    className="w-full border border-slate-300/60 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
+                    style={{ fontFamily: "'Rethink Sans', sans-serif" }}
                   />
-                </div>
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <p className="text-sm text-green-800">
-                    <span className="font-medium">Note:</span> Success is automatically set to <code className="bg-green-100 px-1 rounded">true</code> for all fixes.
-                  </p>
                 </div>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
+                  className="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium transition-colors"
+                  style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}
                 >
                   {submitting ? 'Submitting...' : 'Submit Fix'}
                 </button>
@@ -400,16 +367,16 @@ export default function JobDetailPage() {
           )}
 
           {job.status === 'accepted' && (
-            <div className="mt-4 p-4 bg-green-50 rounded-lg">
-              <p className="text-sm text-green-800">
+            <div className="mt-4 p-3 bg-green-50/50 border border-green-200/60 rounded-lg">
+              <p className="text-sm text-green-800" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>
                 ✓ Fix accepted! Job resolved.
               </p>
             </div>
           )}
 
           {job.status === 'rejected' && (
-            <div className="mt-4 p-4 bg-red-50 rounded-lg">
-              <p className="text-sm text-red-800">
+            <div className="mt-4 p-3 bg-red-50/50 border border-red-200/60 rounded-lg">
+              <p className="text-sm text-red-800" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>
                 ✗ Fix rejected. Please try again.
               </p>
             </div>
@@ -419,4 +386,3 @@ export default function JobDetailPage() {
     </div>
   )
 }
-

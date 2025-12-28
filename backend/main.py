@@ -715,6 +715,28 @@ class LabRequest(BaseModel):
     use_case: str
 
 
+class CreateLabRequest(BaseModel):
+    name: str
+    use_case: Optional[str] = None
+
+
+class CreateProjectRequest(BaseModel):
+    lab_id: str
+    name: str
+    robot_type: Optional[str] = None
+    description: Optional[str] = None
+
+
+class CreateWorkerRequest(BaseModel):
+    email: str
+    country: Optional[str] = None
+    name: Optional[str] = None
+
+
+class RejectJobRequest(BaseModel):
+    reason: Optional[str] = None
+
+
 @app.post("/api/waitlist")
 async def add_to_waitlist(entry: WaitlistEntry):
     """
@@ -836,6 +858,20 @@ async def get_labs():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/labs")
+async def create_lab(request: CreateLabRequest):
+    """Create a new lab."""
+    require_supabase()
+    try:
+        result = supabase.table("labs").insert({
+            "name": request.name,
+            "use_case": request.use_case
+        }).execute()
+        return {"lab": result.data[0] if result.data else None}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/labs/{lab_id}/summary")
 async def get_lab_summary(lab_id: str):
     """Get high-level summary for a lab."""
@@ -890,6 +926,120 @@ async def get_lab_episodes(
         
         result = query.order("created_at", desc=True).execute()
         return {"episodes": result.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Projects endpoints
+@app.get("/api/projects")
+async def get_projects(lab_id: Optional[str] = None):
+    """Get all projects, optionally filtered by lab_id."""
+    require_supabase()
+    try:
+        query = supabase.table("projects").select("*")
+        if lab_id:
+            query = query.eq("lab_id", lab_id)
+        result = query.order("created_at", desc=True).execute()
+        return {"projects": result.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/projects")
+async def create_project(request: CreateProjectRequest):
+    """Create a new project."""
+    require_supabase()
+    try:
+        result = supabase.table("projects").insert({
+            "lab_id": request.lab_id,
+            "name": request.name,
+            "description": request.description,
+            "robot_type": request.robot_type
+        }).execute()
+        return {"project": result.data[0] if result.data else None}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Workers endpoints
+@app.post("/api/workers")
+async def create_worker(request: CreateWorkerRequest):
+    """Create a new worker."""
+    require_supabase()
+    try:
+        result = supabase.table("workers").insert({
+            "email": request.email,
+            "name": request.name or request.email.split("@")[0],
+            "country": request.country
+        }).execute()
+        return {"worker": result.data[0] if result.data else None}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Job approval/rejection
+@app.post("/api/jobs/{job_id}/approve")
+async def approve_job(job_id: str):
+    """Approve a job submission."""
+    require_supabase()
+    try:
+        result = supabase.table("jobs").update({
+            "status": "accepted",
+            "updated_at": datetime.utcnow().isoformat()
+        }).eq("id", job_id).execute()
+        
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Job not found")
+        
+        return {"job": result.data[0]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/jobs/{job_id}/reject")
+async def reject_job(job_id: str, request: RejectJobRequest):
+    """Reject a job submission."""
+    require_supabase()
+    try:
+        result = supabase.table("jobs").update({
+            "status": "rejected",
+            "updated_at": datetime.utcnow().isoformat()
+        }).eq("id", job_id).execute()
+        
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Job not found")
+        
+        return {"job": result.data[0]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Episodes endpoints
+@app.get("/api/episodes/{episode_id}")
+async def get_episode(episode_id: str):
+    """Get episode by ID with signed video URL."""
+    require_supabase()
+    try:
+        result = supabase.table("episodes").select("*").eq("id", episode_id).execute()
+        
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Episode not found")
+        
+        episode = result.data[0]
+        
+        # Get signed video URL if video_path exists
+        video_url = None
+        if episode.get("video_path"):
+            video_url = get_signed_url(episode["video_path"])
+        
+        episode["video_url"] = video_url
+        return episode
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

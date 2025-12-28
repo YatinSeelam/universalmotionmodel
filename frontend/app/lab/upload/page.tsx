@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { LabDashboardNav } from '@/components/DashboardNav'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
@@ -131,24 +132,21 @@ export default function LabUploadPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-[1396px] mx-auto px-6 sm:px-8 lg:px-12 py-8 sm:py-12">
+    <div className="min-h-screen bg-white">
+      <LabDashboardNav />
+      <div className="max-w-7xl mx-auto px-6 py-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-medium text-slate-900 mb-3 leading-tight" style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}>
-            Upload Episode
-          </h1>
-          <p className="text-lg sm:text-xl text-slate-600 leading-relaxed max-w-2xl" style={{ fontFamily: "'Rethink Sans', sans-serif", letterSpacing: '-0.02em' }}>
-            Upload a robot run episode with metadata.
-          </p>
+        <div className="mb-5">
+          <h1 className="text-2xl font-medium text-slate-900 mb-1.5" style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}>Upload Episode</h1>
+          <p className="text-sm text-slate-600" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Upload a robot run episode with metadata.</p>
         </div>
 
         {/* Form */}
-        <div className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8 shadow-sm">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
+        <div className="bg-white border border-slate-200/60 rounded-lg p-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-4">
               {/* Left Column */}
-              <div className="space-y-5">
+              <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2" style={{ fontFamily: "'Archivo', sans-serif" }}>
                     Lab
@@ -156,7 +154,8 @@ export default function LabUploadPage() {
                   <select
                     value={selectedLabId}
                     onChange={(e) => setSelectedLabId(e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                    className="w-full border border-slate-300/60 rounded-lg px-4 py-2.5 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#8350e8]/20 focus:border-[#8350e8] transition-all"
+                    style={{ fontFamily: "'Rethink Sans', sans-serif" }}
                   >
                     {labs.map((lab) => (
                       <option key={lab.id} value={lab.id}>
@@ -174,7 +173,8 @@ export default function LabUploadPage() {
                     value={selectedTask}
                     onChange={(e) => setSelectedTask(e.target.value)}
                     required
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                    className="w-full border border-slate-300/60 rounded-lg px-4 py-2.5 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#8350e8]/20 focus:border-[#8350e8] transition-all"
+                    style={{ fontFamily: "'Rethink Sans', sans-serif" }}
                   >
                     {tasks.map((task) => (
                       <option key={task.id} value={task.id}>
@@ -190,7 +190,7 @@ export default function LabUploadPage() {
                       type="checkbox"
                       checked={success}
                       onChange={(e) => setSuccess(e.target.checked)}
-                      className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
+                      className="w-4 h-4 rounded border-slate-300 text-[#8350e8] focus:ring-[#8350e8]"
                     />
                     <span className="text-sm font-medium text-slate-700" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>
                       Episode succeeded
@@ -207,7 +207,8 @@ export default function LabUploadPage() {
                       <select
                         value={failureReason}
                         onChange={(e) => setFailureReason(e.target.value)}
-                        className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                        className="w-full border border-slate-300/60 rounded-lg px-4 py-2.5 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#8350e8]/20 focus:border-[#8350e8] transition-all"
+                        style={{ fontFamily: "'Rethink Sans', sans-serif" }}
                       >
                         <option value="">Select...</option>
                         <option value="slip_after_grasp">Slip After Grasp</option>
@@ -228,7 +229,8 @@ export default function LabUploadPage() {
                         min="0"
                         value={failureTimeSec || ''}
                         onChange={(e) => setFailureTimeSec(e.target.value ? parseFloat(e.target.value) : null)}
-                        className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                        className="w-full border border-slate-300/60 rounded-lg px-4 py-2.5 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#8350e8]/20 focus:border-[#8350e8] transition-all"
+                        style={{ fontFamily: "'Rethink Sans', sans-serif" }}
                         placeholder="8.2"
                       />
                     </div>
@@ -237,7 +239,7 @@ export default function LabUploadPage() {
               </div>
 
               {/* Right Column */}
-              <div className="space-y-5">
+              <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2" style={{ fontFamily: "'Archivo', sans-serif" }}>
                     Duration (s) <span className="text-red-500">*</span>
@@ -249,7 +251,8 @@ export default function LabUploadPage() {
                     value={durationSec}
                     onChange={(e) => setDurationSec(parseFloat(e.target.value) || 10)}
                     required
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                    className="w-full border border-slate-300/60 rounded-lg px-4 py-2.5 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#8350e8]/20 focus:border-[#8350e8] transition-all"
+                    style={{ fontFamily: "'Rethink Sans', sans-serif" }}
                   />
                 </div>
 
@@ -263,7 +266,8 @@ export default function LabUploadPage() {
                     value={hz}
                     onChange={(e) => setHz(parseInt(e.target.value) || 20)}
                     required
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                    className="w-full border border-slate-300/60 rounded-lg px-4 py-2.5 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#8350e8]/20 focus:border-[#8350e8] transition-all"
+                    style={{ fontFamily: "'Rethink Sans', sans-serif" }}
                   />
                 </div>
 
@@ -271,7 +275,7 @@ export default function LabUploadPage() {
                   <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-2" style={{ fontFamily: "'Archivo', sans-serif" }}>
                     Steps
                   </label>
-                  <div className="w-full border border-slate-300 rounded-lg px-4 py-2.5 bg-slate-50 text-slate-600 text-sm">
+                  <div className="w-full border border-slate-300/60 rounded-lg px-4 py-2.5 bg-slate-50/50 text-slate-600 text-sm" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>
                     {steps}
                   </div>
                   <p className="text-xs text-slate-500 mt-1.5" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>
@@ -287,19 +291,20 @@ export default function LabUploadPage() {
                     type="file"
                     accept="video/mp4"
                     onChange={(e) => setVideo(e.target.files?.[0] || null)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
+                    className="w-full border border-slate-300/60 rounded-lg px-4 py-2.5 text-sm bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
+                    style={{ fontFamily: "'Rethink Sans', sans-serif" }}
                   />
                 </div>
               </div>
             </div>
 
             {/* Submit Button */}
-            <div className="pt-4 border-t border-slate-200">
+            <div className="pt-4 border-t border-slate-200/60">
               <button
                 type="submit"
                 disabled={uploading || !selectedTask}
-                className="w-full px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
-                style={{ fontFamily: "'Archivo', sans-serif" }}
+                className="w-full px-6 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors flex items-center justify-center gap-2"
+                style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}
               >
                 {uploading ? (
                   <>
