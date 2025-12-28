@@ -17,7 +17,6 @@ import {
   CardVisualChart,
 } from "@/components/ui/animated-card-chart";
 import { Visual3 } from "@/components/ui/animated-card-chart";
-import { InteractiveRobotSection } from "@/components/ui/interactive-robot-section";
 import { AnimatedVideoPlaceholder } from "@/components/ui/animated-video-placeholder";
 
 export default function Home() {
