@@ -23,10 +23,14 @@ from emailer import (
 
 app = FastAPI(title="Robot Motion Data Platform API")
 
-# CORS middleware
+# CORS middleware - Allow localhost and Vercel deployments
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "https://umm-ruddy.vercel.app",  # Your Vercel domain
+        "https://*.vercel.app",  # All Vercel preview deployments
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
