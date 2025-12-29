@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LabDashboardNav } from '@/components/DashboardNav'
+import { AppShell } from '@/components/app-shell/AppShell'
+import { ContentContainer } from '@/components/app-shell/ContentContainer'
+import { ShellHeader } from '@/components/app-shell/ShellHeader'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { apiFetch } from '@/lib/api'
 
 interface Lab {
   id: string
@@ -69,102 +71,108 @@ export default function LabDashboardPage() {
   }, [selectedLabId, selectedProjectId, selectedStatus])
 
   const fetchLabs = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/labs`)
-      const data = await res.json()
-      setLabs(data.labs || [])
-      if (data.labs && data.labs.length > 0) {
-        setSelectedLabId(data.labs[0].id)
-      }
-    } catch (error) {
-      console.error('Failed to fetch labs:', error)
-    } finally {
+    const { data, error } = await apiFetch('/api/labs')
+    if (error) {
+      setLabs([])
       setLoading(false)
+      return
     }
+    setLabs(data?.labs || [])
+    if (data?.labs && data.labs.length > 0) {
+      setSelectedLabId(data.labs[0].id)
+    }
+    setLoading(false)
   }
 
   const fetchProjects = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/projects?lab_id=${selectedLabId}`)
-      const data = await res.json()
-      setProjects(data.projects || [])
-      if (data.projects && data.projects.length > 0) {
-        setSelectedProjectId(data.projects[0].id)
-      }
-    } catch (error) {
-      console.error('Failed to fetch projects:', error)
+    if (!selectedLabId) return
+    
+    const { data, error } = await apiFetch(`/api/projects?lab_id=${selectedLabId}`)
+    if (error) {
+      setProjects([])
+      return
+    }
+    setProjects(data?.projects || [])
+    if (data?.projects && data.projects.length > 0) {
+      setSelectedProjectId(data.projects[0].id)
     }
   }
 
   const fetchStats = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/labs/${selectedLabId}/summary`)
-      const data = await res.json()
-      
-      const jobsRes = await fetch(`${API_URL}/api/jobs?lab_id=${selectedLabId}`)
-      const jobsData = await jobsRes.json()
-      const allJobs = jobsData.jobs || []
-      
-      const avgFixTime = 34
-      const activeWorkers = new Set(
-        allJobs
-          .filter((j: any) => j.claimed_by_worker_id)
-          .map((j: any) => j.claimed_by_worker_id)
-      ).size
-      
-      setStats({
-        tasks_created: allJobs.length,
-        tasks_completed: allJobs.filter((j: any) => j.status === 'accepted').length,
-        approval_rate: data.acceptance_rate || 0,
-        avg_fix_time: avgFixTime,
-        active_workers: activeWorkers
-      })
-    } catch (error) {
-      console.error('Failed to fetch stats:', error)
+    if (!selectedLabId) return
+    
+    const { data: summaryData, error: summaryError } = await apiFetch(`/api/labs/${selectedLabId}/summary`)
+    if (summaryError) {
+      setStats(null)
+      return
     }
+    
+    const { data: jobsData, error: jobsError } = await apiFetch(`/api/jobs?lab_id=${selectedLabId}`)
+    if (jobsError) {
+      setStats(null)
+      return
+    }
+    
+    const allJobs = jobsData?.jobs || []
+    const avgFixTime = 34
+    const activeWorkers = new Set(
+      allJobs
+        .filter((j: any) => j.claimed_by_worker_id)
+        .map((j: any) => j.claimed_by_worker_id)
+    ).size
+    
+    setStats({
+      tasks_created: allJobs.length,
+      tasks_completed: allJobs.filter((j: any) => j.status === 'accepted').length,
+      approval_rate: summaryData?.acceptance_rate || 0,
+      avg_fix_time: avgFixTime,
+      active_workers: activeWorkers
+    })
   }
 
   const fetchPipelineStats = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/jobs?lab_id=${selectedLabId}`)
-      const data = await res.json()
-      const allJobs = data.jobs || []
-      
-      setPipelineStats({
-        uploaded: allJobs.filter((j: any) => j.status === 'open').length,
-        in_review: allJobs.filter((j: any) => j.status === 'submitted').length,
-        in_progress: allJobs.filter((j: any) => j.status === 'claimed').length,
-        completed: allJobs.filter((j: any) => j.status === 'accepted').length,
-        rejected: allJobs.filter((j: any) => j.status === 'rejected').length
-      })
-    } catch (error) {
-      console.error('Failed to fetch pipeline stats:', error)
+    if (!selectedLabId) return
+    
+    const { data, error } = await apiFetch(`/api/jobs?lab_id=${selectedLabId}`)
+    if (error) {
+      setPipelineStats(null)
+      return
     }
+    
+    const allJobs = data?.jobs || []
+    setPipelineStats({
+      uploaded: allJobs.filter((j: any) => j.status === 'open').length,
+      in_review: allJobs.filter((j: any) => j.status === 'submitted').length,
+      in_progress: allJobs.filter((j: any) => j.status === 'claimed').length,
+      completed: allJobs.filter((j: any) => j.status === 'accepted').length,
+      rejected: allJobs.filter((j: any) => j.status === 'rejected').length
+    })
   }
 
   const fetchTasks = async () => {
-    try {
-      let url = `${API_URL}/api/jobs?lab_id=${selectedLabId}`
-      if (selectedStatus) {
-        url += `&status=${selectedStatus}`
-      }
-      
-      const res = await fetch(url)
-      const data = await res.json()
-      
-      const transformedTasks = (data.jobs || []).map((job: any) => ({
-        id: job.id,
-        task_id: job.task_id,
-        status: job.status,
-        worker_id: job.claimed_by_worker_id,
-        quality_score: 85,
-        submitted_at: job.updated_at
-      }))
-      
-      setTasks(transformedTasks)
-    } catch (error) {
-      console.error('Failed to fetch tasks:', error)
+    if (!selectedLabId) return
+    
+    let url = `/api/jobs?lab_id=${selectedLabId}`
+    if (selectedStatus) {
+      url += `&status=${selectedStatus}`
     }
+    
+    const { data, error } = await apiFetch(url)
+    if (error) {
+      setTasks([])
+      return
+    }
+    
+    const transformedTasks = (data?.jobs || []).map((job: any) => ({
+      id: job.id,
+      task_id: job.task_id,
+      status: job.status,
+      worker_id: job.claimed_by_worker_id,
+      quality_score: 85,
+      submitted_at: job.updated_at
+    }))
+    
+    setTasks(transformedTasks)
   }
 
   const getStatusColor = (status: string) => {
@@ -190,14 +198,13 @@ export default function LabDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <LabDashboardNav />
-      
-      {/* Top Bar */}
-      <div className="border-b border-slate-200/60 bg-white/50 backdrop-blur-sm sticky top-[49px] z-40">
-        <div className="max-w-7xl mx-auto px-6 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+    <AppShell type="lab">
+      <ContentContainer>
+        <ShellHeader 
+          title="Overview"
+          description="Monitor your dataset health"
+          actions={
+            <div className="flex items-center gap-3">
               {projects.length > 0 && (
                 <select
                   value={selectedProjectId}
@@ -213,7 +220,6 @@ export default function LabDashboardPage() {
               <span className="px-2.5 py-1 bg-green-50 text-green-700 border border-green-200 rounded-md text-xs font-medium" style={{ fontFamily: "'Archivo', sans-serif" }}>
                 Active
               </span>
-            </div>
             <Link
               href="/lab/export"
               className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-medium transition-colors"
@@ -222,10 +228,8 @@ export default function LabDashboardPage() {
               Export
             </Link>
           </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-6 py-6">
+          }
+        />
         {/* Stats */}
         {stats && (
           <div className="grid grid-cols-5 gap-3 mb-5">
@@ -324,7 +328,7 @@ export default function LabDashboardPage() {
             </table>
           </div>
         </div>
-      </div>
-    </div>
+      </ContentContainer>
+    </AppShell>
   )
 }

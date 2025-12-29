@@ -2,9 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { LabDashboardNav } from '@/components/DashboardNav'
+import { FiUploadCloud } from 'react-icons/fi'
+import { AppShell } from '@/components/app-shell/AppShell'
+import { ContentContainer } from '@/components/app-shell/ContentContainer'
+import { ShellHeader } from '@/components/app-shell/ShellHeader'
+import { EmptyState } from '@/components/ui/empty-state'
+import { TableCard } from '@/components/ui/table-card'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { apiFetch } from '@/lib/api'
 
 interface Lab {
   id: string
@@ -49,35 +54,33 @@ export default function LabDatasetPage() {
   }, [selectedLabId, selectedTab, selectedTaskId])
 
   const fetchLabs = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/labs`)
-      const data = await res.json()
-      setLabs(data.labs || [])
-      if (data.labs && data.labs.length > 0) {
-        setSelectedLabId(data.labs[0].id)
-      }
-    } catch (error) {
-      console.error('Failed to fetch labs:', error)
-    } finally {
+    const { data, error } = await apiFetch('/api/labs')
+    if (error) {
+      setLabs([])
       setLoading(false)
+      return
     }
+    setLabs(data?.labs || [])
+    if (data?.labs && data.labs.length > 0) {
+      setSelectedLabId(data.labs[0].id)
+    }
+    setLoading(false)
   }
 
   const fetchTasks = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/tasks`)
-      const data = await res.json()
-      setTasks(data.tasks || [])
-    } catch (error) {
-      console.error('Failed to fetch tasks:', error)
+    const { data, error } = await apiFetch('/api/tasks')
+    if (error) {
+      setTasks([])
+      return
     }
+    setTasks(data?.tasks || [])
   }
 
   const fetchEpisodes = async () => {
     if (!selectedLabId) return
     setLoading(true)
     try {
-      let url = `${API_URL}/api/labs/${selectedLabId}/episodes?`
+      let url = `/api/labs/${selectedLabId}/episodes?`
       if (selectedTab === 'accepted') {
         url += 'accepted=true'
       } else if (selectedTab === 'edge_cases') {
@@ -86,11 +89,12 @@ export default function LabDatasetPage() {
       if (selectedTaskId) {
         url += `&task_id=${selectedTaskId}`
       }
-      const res = await fetch(url)
-      const data = await res.json()
-      setEpisodes(data.episodes || [])
-    } catch (error) {
-      console.error('Failed to fetch episodes:', error)
+      const { data, error } = await apiFetch(url)
+      if (error) {
+        setEpisodes([])
+        return
+      }
+      setEpisodes(data?.episodes || [])
     } finally {
       setLoading(false)
     }
@@ -98,24 +102,26 @@ export default function LabDatasetPage() {
 
   if (loading && !episodes.length) {
     return (
-      <div className="min-h-screen bg-white">
-        <LabDashboardNav />
-        <div className="max-w-7xl mx-auto px-6 py-12">
+      <AppShell type="lab">
+        <ContentContainer>
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
               <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
               <p className="text-slate-600" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Loading...</p>
             </div>
           </div>
-        </div>
-      </div>
+        </ContentContainer>
+      </AppShell>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <LabDashboardNav />
-      <div className="max-w-7xl mx-auto px-6 py-6">
+    <AppShell type="lab">
+      <ContentContainer>
+        <ShellHeader 
+          title="Dataset"
+          description="Review your curated data"
+        />
         {/* Filters */}
         <div className="bg-white border border-slate-200/60 rounded-lg p-4 mb-4">
           <div className="flex flex-col sm:flex-row gap-3 mb-3">
@@ -189,17 +195,69 @@ export default function LabDatasetPage() {
         </div>
 
         {/* Episodes Table */}
-        <div className="bg-white border border-slate-200/60 rounded-lg overflow-hidden">
-          {loading ? (
-            <div className="p-8 text-center">
-              <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-slate-600 text-sm" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Loading...</p>
+        {episodes.length === 0 && !loading ? (
+          <TableCard.Root>
+            <TableCard.Header
+              title="Episodes"
+              contentTrailing={
+                <Link
+                  href="/lab/upload"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#8350e8] hover:bg-[#8350e8]/90 text-white rounded-lg text-sm font-medium transition-colors"
+                  style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}
+                >
+                  <FiUploadCloud className="w-4 h-4" />
+                  Upload
+                </Link>
+              }
+            />
+            <div className="flex items-center justify-center overflow-hidden px-8 pt-10 pb-12">
+              <EmptyState size="sm">
+                <EmptyState.Header pattern="grid">
+                  <EmptyState.Illustration type="cloud">
+                    <FiUploadCloud className="w-12 h-12 text-slate-400" />
+                  </EmptyState.Illustration>
+                </EmptyState.Header>
+                <EmptyState.Content>
+                  <EmptyState.Title>Start by uploading an episode</EmptyState.Title>
+                  <EmptyState.Description>
+                    Your dataset episodes will appear here. <br />
+                    Upload your first episode to get started.
+                  </EmptyState.Description>
+                </EmptyState.Content>
+                <EmptyState.Footer>
+                  <Link
+                    href="/lab/upload"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#8350e8] hover:bg-[#8350e8]/90 text-white rounded-lg text-sm font-medium transition-colors"
+                    style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}
+                  >
+                    <FiUploadCloud className="w-4 h-4" />
+                    Upload Episode
+                  </Link>
+                </EmptyState.Footer>
+              </EmptyState>
             </div>
-          ) : episodes.length === 0 ? (
-            <div className="p-8 text-center">
-              <p className="text-slate-600 text-sm" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>No episodes found</p>
-            </div>
-          ) : (
+          </TableCard.Root>
+        ) : (
+          <TableCard.Root>
+            <TableCard.Header
+              title="Episodes"
+              contentTrailing={
+                <Link
+                  href="/lab/upload"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-[#8350e8] hover:bg-[#8350e8]/90 text-white rounded-lg text-sm font-medium transition-colors"
+                  style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}
+                >
+                  <FiUploadCloud className="w-4 h-4" />
+                  Upload
+                </Link>
+              }
+            />
+            {loading ? (
+              <div className="p-8 text-center">
+                <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-slate-600 text-sm" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Loading...</p>
+              </div>
+            ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50/50">
@@ -240,9 +298,10 @@ export default function LabDatasetPage() {
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
-      </div>
-    </div>
+            )}
+          </TableCard.Root>
+        )}
+      </ContentContainer>
+    </AppShell>
   )
 }

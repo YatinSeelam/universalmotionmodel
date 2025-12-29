@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { AnimatedVideoPlaceholder } from '@/components/ui/animated-video-placeholder'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { apiFetch } from '@/lib/api'
 
 interface Lab {
   id: string
@@ -50,38 +50,37 @@ export default function LabDashboardPage() {
   }, [selectedLabId])
 
   const fetchLabs = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/labs`)
-      const data = await res.json()
-      setLabs(data.labs || [])
-      if (data.labs && data.labs.length > 0) {
-        setSelectedLabId(data.labs[0].id)
-      }
-    } catch (error) {
-      console.error('Failed to fetch labs:', error)
-    } finally {
+    const { data, error } = await apiFetch('/api/labs')
+    if (error) {
+      setLabs([])
       setLoading(false)
+      return
     }
+    setLabs(data?.labs || [])
+    if (data?.labs && data.labs.length > 0) {
+      setSelectedLabId(data.labs[0].id)
+    }
+    setLoading(false)
   }
 
   const fetchSummary = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/labs/${selectedLabId}/summary`)
-      const data = await res.json()
-      setSummary(data)
-    } catch (error) {
-      console.error('Failed to fetch summary:', error)
+    if (!selectedLabId) return
+    const { data, error } = await apiFetch(`/api/labs/${selectedLabId}/summary`)
+    if (error) {
+      setSummary(null)
+      return
     }
+    setSummary(data)
   }
 
   const fetchRecentEpisodes = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/labs/${selectedLabId}/episodes`)
-      const data = await res.json()
-      setRecentEpisodes(data.episodes?.slice(0, 5) || [])
-    } catch (error) {
-      console.error('Failed to fetch recent episodes:', error)
+    if (!selectedLabId) return
+    const { data, error } = await apiFetch(`/api/labs/${selectedLabId}/episodes`)
+    if (error) {
+      setRecentEpisodes([])
+      return
     }
+    setRecentEpisodes(data?.episodes?.slice(0, 5) || [])
   }
 
   if (loading) {

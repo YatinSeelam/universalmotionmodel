@@ -7,7 +7,7 @@ import { SparklesDemo } from "@/components/ui/sparkles-demo"
 import { GridBackground } from "@/components/ui/grid-background"
 import { CustomSelect } from "@/components/ui/custom-select"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { apiFetch } from '@/lib/api'
 
 export default function WaitlistPage() {
   const [email, setEmail] = useState('')
@@ -21,21 +21,17 @@ export default function WaitlistPage() {
     setSubmitting(true)
 
     try {
-      const res = await fetch(`${API_URL}/api/waitlist`, {
+      const { data, error } = await apiFetch('/api/waitlist', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ email, role, name }),
       })
 
-      if (res.ok) {
+      if (error) {
+        alert(error || 'Failed to join waitlist')
+      } else {
         setSubmitted(true)
         setEmail('')
         setName('')
-      } else {
-        const data = await res.json()
-        alert(data.detail || 'Failed to join waitlist')
       }
     } catch (error) {
       console.error('Waitlist error:', error)

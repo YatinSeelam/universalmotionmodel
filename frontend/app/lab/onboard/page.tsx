@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { apiFetch } from '@/lib/api'
 
 const USE_CASES = ['Warehouse', 'Manipulation', 'Navigation', 'Medical', 'Other']
 const ROBOT_TYPES = ['Arm', 'Mobile', 'Simulation', 'Other']
@@ -26,19 +26,14 @@ export default function LabOnboardPage() {
     if (!labName || !useCase) return
     setLoading(true)
     try {
-      const res = await fetch(`${API_URL}/api/labs`, {
+      const { data, error } = await apiFetch('/api/labs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: labName, use_case: useCase })
       })
-      if (res.ok) {
-        const data = await res.json()
-        setLabId(data.lab?.id || '00000000-0000-0000-0000-000000000001')
-        setStep(2)
-      } else {
-        setLabId('00000000-0000-0000-0000-000000000001')
-        setStep(2)
-      }
+      
+      // Allow to proceed even if API fails in MVP
+      setLabId(data?.lab?.id || '00000000-0000-0000-0000-000000000001')
+      setStep(2)
     } catch (error) {
       console.error('Failed to create lab:', error)
       setLabId('00000000-0000-0000-0000-000000000001')
@@ -52,14 +47,12 @@ export default function LabOnboardPage() {
     if (!projectName || !robotType) return
     setLoading(true)
     try {
-      const res = await fetch(`${API_URL}/api/projects`, {
+      const { data, error } = await apiFetch('/api/projects', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lab_id: labId, name: projectName, robot_type: robotType })
+        body: JSON.stringify({ lab_id: labId, name: projectName, robot_type: robotType, task_type: taskType })
       })
-      if (res.ok || true) {
-        setStep(3)
-      }
+      // Allow to proceed even if API fails in MVP
+      setStep(3)
     } catch (error) {
       console.error('Failed to create project:', error)
       setStep(3)

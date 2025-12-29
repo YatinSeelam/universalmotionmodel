@@ -21,3 +21,5 @@ CREATE TABLE IF NOT EXISTS lab_requests (
 CREATE INDEX IF NOT EXISTS idx_waitlist_email ON waitlist(email);
 CREATE INDEX IF NOT EXISTS idx_lab_requests_email ON lab_requests(email);
 
+
+

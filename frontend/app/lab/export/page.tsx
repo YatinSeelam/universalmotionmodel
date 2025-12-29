@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { LabDashboardNav } from '@/components/DashboardNav'
+import { AppShell } from '@/components/app-shell/AppShell'
+import { ContentContainer } from '@/components/app-shell/ContentContainer'
+import { ShellHeader } from '@/components/app-shell/ShellHeader'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { apiFetch, API_URL } from '@/lib/api'
 
 interface Task {
   id: string
@@ -41,30 +43,27 @@ export default function LabExportPage() {
   }, [selectedTask])
 
   const fetchTasks = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/tasks`)
-      const data = await res.json()
-      setTasks(data.tasks || [])
-      if (data.tasks && data.tasks.length > 0) {
-        setSelectedTask(data.tasks[0].id)
-      }
-    } catch (error) {
-      console.error('Failed to fetch tasks:', error)
+    const { data, error } = await apiFetch('/api/tasks')
+    if (error) {
+      setTasks([])
+      return
+    }
+    setTasks(data?.tasks || [])
+    if (data?.tasks && data.tasks.length > 0) {
+      setSelectedTask(data.tasks[0].id)
     }
   }
 
   const fetchStats = async () => {
     if (!selectedTask) return
     setLoadingStats(true)
-    try {
-      const res = await fetch(`${API_URL}/api/dataset/stats?task_id=${selectedTask}`)
-      const data = await res.json()
+    const { data, error } = await apiFetch(`/api/dataset/stats?task_id=${selectedTask}`)
+    if (error) {
+      setStats(null)
+    } else {
       setStats(data)
-    } catch (error) {
-      console.error('Failed to fetch stats:', error)
-    } finally {
-      setLoadingStats(false)
     }
+    setLoadingStats(false)
   }
 
   const handleExport = async () => {
@@ -75,10 +74,13 @@ export default function LabExportPage() {
 
     setExporting(true)
     try {
-      const res = await fetch(`${API_URL}/api/export?task_id=${selectedTask}`)
-      if (res.ok) {
-        const blob = await res.blob()
-        const url = window.URL.createObjectURL(blob)
+      const { data, error } = await apiFetch(`/api/export?task_id=${selectedTask}`, {
+        headers: { 'Accept': 'application/zip' }
+      })
+      if (error) {
+        alert('Export failed')
+      } else if (data instanceof Blob) {
+        const url = window.URL.createObjectURL(data)
         const a = document.createElement('a')
         a.href = url
         a.download = `dataset_${selectedTask}_${new Date().toISOString().split('T')[0]}.zip`
@@ -86,8 +88,6 @@ export default function LabExportPage() {
         a.click()
         window.URL.revokeObjectURL(url)
         document.body.removeChild(a)
-      } else {
-        alert('Export failed')
       }
     } catch (error) {
       console.error('Export error:', error)
@@ -98,14 +98,12 @@ export default function LabExportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <LabDashboardNav />
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        {/* Header */}
-        <div className="mb-5">
-          <h1 className="text-2xl font-medium text-slate-900 mb-1.5" style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}>Export Center</h1>
-          <p className="text-sm text-slate-600" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Download curated datasets with accepted episodes and fixes.</p>
-        </div>
+    <AppShell type="lab">
+      <ContentContainer>
+        <ShellHeader 
+          title="Export"
+          description="Download training datasets"
+        />
 
         {/* Task Selection */}
         <div className="bg-white border border-slate-200/60 rounded-lg p-4 mb-4">
@@ -222,7 +220,7 @@ export default function LabExportPage() {
             </div>
           </>
         )}
-      </div>
-    </div>
+      </ContentContainer>
+    </AppShell>
   )
 }

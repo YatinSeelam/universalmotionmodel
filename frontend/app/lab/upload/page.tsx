@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LabDashboardNav } from '@/components/DashboardNav'
+import { AppShell } from '@/components/app-shell/AppShell'
+import { ContentContainer } from '@/components/app-shell/ContentContainer'
+import { ShellHeader } from '@/components/app-shell/ShellHeader'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { apiFetch, API_URL } from '@/lib/api'
 
 interface Task {
   id: string
@@ -45,31 +47,29 @@ export default function LabUploadPage() {
   }, [selectedLabId])
 
   const fetchLabs = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/labs`)
-      const data = await res.json()
-      setLabs(data.labs || [])
-      if (data.labs && data.labs.length > 0) {
-        setSelectedLabId(data.labs[0].id)
-      }
-    } catch (error) {
-      console.error('Failed to fetch labs:', error)
+    const { data, error } = await apiFetch('/api/labs')
+    if (error) {
+      setLabs([])
+      return
+    }
+    setLabs(data?.labs || [])
+    if (data?.labs && data.labs.length > 0) {
+      setSelectedLabId(data.labs[0].id)
     }
   }
 
   const fetchTasks = async () => {
-    try {
-      const url = selectedLabId 
-        ? `${API_URL}/api/tasks?lab_id=${selectedLabId}`
-        : `${API_URL}/api/tasks`
-      const res = await fetch(url)
-      const data = await res.json()
-      setTasks(data.tasks || [])
-      if (data.tasks && data.tasks.length > 0) {
-        setSelectedTask(data.tasks[0].id)
-      }
-    } catch (error) {
-      console.error('Failed to fetch tasks:', error)
+    const url = selectedLabId 
+      ? `/api/tasks?lab_id=${selectedLabId}`
+      : '/api/tasks'
+    const { data, error } = await apiFetch(url)
+    if (error) {
+      setTasks([])
+      return
+    }
+    setTasks(data?.tasks || [])
+    if (data?.tasks && data.tasks.length > 0) {
+      setSelectedTask(data.tasks[0].id)
     }
   }
 
@@ -106,21 +106,27 @@ export default function LabUploadPage() {
         formData.append('video', video)
       }
 
-      const res = await fetch(`${API_URL}/api/episodes/upload`, {
-        method: 'POST',
-        body: formData,
-      })
+      try {
+        const res = await fetch(`${API_URL}/api/episodes/upload`, {
+          method: 'POST',
+          body: formData,
+        })
 
-      const data = await res.json()
-      if (res.ok) {
-        if (data.job_id) {
-          alert(`Episode uploaded! Job created: ${data.job_id}`)
-          router.push(`/work/jobs/${data.job_id}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.job_id) {
+            alert(`Episode uploaded! Job created: ${data.job_id}`)
+            router.push(`/work/jobs/${data.job_id}`)
+          } else {
+            alert('Episode uploaded! (No edge case detected)')
+            router.push('/work/queue')
+          }
         } else {
-          alert('Episode uploaded! (No edge case detected)')
-          router.push('/work/queue')
+          const errorData = await res.json().catch(() => ({}))
+          alert(errorData.detail || 'Upload failed')
         }
-      } else {
+      } catch (fetchError) {
+        console.error('Upload error:', fetchError)
         alert('Upload failed')
       }
     } catch (error) {
@@ -132,14 +138,12 @@ export default function LabUploadPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <LabDashboardNav />
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        {/* Header */}
-        <div className="mb-5">
-          <h1 className="text-2xl font-medium text-slate-900 mb-1.5" style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}>Upload Episode</h1>
-          <p className="text-sm text-slate-600" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Upload a robot run episode with metadata.</p>
-        </div>
+    <AppShell type="lab">
+      <ContentContainer>
+        <ShellHeader 
+          title="Upload Episode"
+          description="Add a new robot run"
+        />
 
         {/* Form */}
         <div className="bg-white border border-slate-200/60 rounded-lg p-5">
@@ -323,7 +327,7 @@ export default function LabUploadPage() {
             </div>
           </form>
         </div>
-      </div>
-    </div>
+      </ContentContainer>
+    </AppShell>
   )
 }

@@ -24,3 +24,5 @@ CREATE INDEX IF NOT EXISTS idx_waitlist_email_sent ON waitlist(email_sent);
 CREATE INDEX IF NOT EXISTS idx_lab_requests_confirmation_sent ON lab_requests(confirmation_sent);
 CREATE INDEX IF NOT EXISTS idx_lab_requests_admin_notified ON lab_requests(admin_notified);
 
+
+

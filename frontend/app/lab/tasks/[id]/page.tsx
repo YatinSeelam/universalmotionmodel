@@ -3,9 +3,11 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LabDashboardNav } from '@/components/DashboardNav'
+import { AppShell } from '@/components/app-shell/AppShell'
+import { ContentContainer } from '@/components/app-shell/ContentContainer'
+import { ShellHeader } from '@/components/app-shell/ShellHeader'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { apiFetch, API_URL } from '@/lib/api'
 
 interface JobDetail {
   id: string
@@ -46,36 +48,32 @@ export default function LabTaskDetailPage() {
   }, [taskId])
 
   const fetchJob = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/jobs/${taskId}`)
-      const data = await res.json()
-      
-      if (data.fix_episode_id) {
-        try {
-          const fixRes = await fetch(`${API_URL}/api/episodes/${data.fix_episode_id}`)
-          if (fixRes.ok) {
-            const fixData = await fixRes.json()
-            data.fix_episode = fixData
-            data.fix_video_url = fixData.video_url
-          }
-        } catch (error) {
-          console.error('Failed to fetch fix episode:', error)
-        }
-      }
-      
-      setJob(data)
-    } catch (error) {
-      console.error('Failed to fetch job:', error)
-    } finally {
+    const { data: jobData, error: jobError } = await apiFetch(`/api/jobs/${taskId}`)
+    if (jobError || !jobData) {
+      setJob(null)
       setLoading(false)
+      return
     }
+    
+    if (jobData.fix_episode_id) {
+      const { data: fixData, error: fixError } = await apiFetch(`/api/episodes/${jobData.fix_episode_id}`)
+      if (!fixError && fixData) {
+        jobData.fix_episode = fixData
+        jobData.fix_video_url = fixData.video_url
+      }
+    }
+    
+    setJob(jobData)
+    setLoading(false)
   }
 
   const handleApprove = async () => {
     setActionLoading(true)
     try {
-      const res = await fetch(`${API_URL}/api/jobs/${taskId}/approve`, { method: 'POST' })
-      if (res.ok) {
+      const { data, error } = await apiFetch(`/api/jobs/${taskId}/approve`, { method: 'POST' })
+      if (error) {
+        alert('Failed to approve task')
+      } else {
         fetchJob()
       }
     } catch (error) {
@@ -92,12 +90,14 @@ export default function LabTaskDetailPage() {
     
     setActionLoading(true)
     try {
-      const res = await fetch(`${API_URL}/api/jobs/${taskId}/reject`, {
+      const { data, error } = await apiFetch(`/api/jobs/${taskId}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: reason || '' })
       })
-      if (res.ok) {
+      if (error) {
+        alert('Failed to reject task')
+      } else {
         fetchJob()
       }
     } catch (error) {
@@ -110,56 +110,62 @@ export default function LabTaskDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading...</p>
-        </div>
-      </div>
+      <AppShell type="lab">
+        <ContentContainer>
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-slate-600" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Loading...</p>
+            </div>
+          </div>
+        </ContentContainer>
+      </AppShell>
     )
   }
 
   if (!job) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <p className="text-slate-600">Task not found</p>
-      </div>
+      <AppShell type="lab">
+        <ContentContainer>
+          <p className="text-slate-600" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Task not found</p>
+        </ContentContainer>
+      </AppShell>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <LabDashboardNav />
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        {/* Header */}
-        <div className="mb-5 flex items-center justify-between">
-          <div>
-            <Link href="/lab/dashboard" className="text-xs text-slate-500 hover:text-[#8350e8] mb-1.5 inline-block" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>
-              ← Back to Dashboard
-            </Link>
-            <h1 className="text-xl font-medium text-slate-900 mb-1" style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}>Task Detail</h1>
-            <p className="text-sm text-slate-500" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Task ID: {job.task_id}</p>
-          </div>
-          {job.status === 'submitted' && (
-            <div className="flex gap-2">
-              <button
-                onClick={handleReject}
-                disabled={actionLoading}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
-                style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}
-              >
-                Reject
-              </button>
-              <button
-                onClick={handleApprove}
-                disabled={actionLoading}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
-                style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}
-              >
-                Approve
-              </button>
-            </div>
-          )}
+    <AppShell type="lab">
+      <ContentContainer>
+        <div className="mb-5">
+          <Link href="/lab/dashboard" className="text-xs text-slate-500 hover:text-[#8350e8] mb-1.5 inline-block" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>
+            ← Back to Dashboard
+          </Link>
+          <ShellHeader 
+            title="Task Detail"
+            description={`Task ID: ${job.task_id}`}
+            actions={
+              job.status === 'submitted' ? (
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleReject}
+                    disabled={actionLoading}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
+                    style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}
+                  >
+                    Reject
+                  </button>
+                  <button
+                    onClick={handleApprove}
+                    disabled={actionLoading}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
+                    style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}
+                  >
+                    Approve
+                  </button>
+                </div>
+              ) : undefined
+            }
+          />
         </div>
 
         {/* Split Layout */}
@@ -251,7 +257,7 @@ export default function LabTaskDetailPage() {
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </ContentContainer>
+    </AppShell>
   )
 }

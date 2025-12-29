@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { apiFetch } from '@/lib/api'
 
 export default function WorkerOnboardPage() {
   const router = useRouter()
@@ -23,16 +23,13 @@ export default function WorkerOnboardPage() {
     
     setLoading(true)
     try {
-      // Create worker account
-      const res = await fetch(`${API_URL}/api/workers`, {
+      const { data, error } = await apiFetch('/api/workers', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, country })
       })
       
-      if (res.ok || true) { // Allow to proceed even if API fails in MVP
-        setStep(2)
-      }
+      // Allow to proceed even if API fails in MVP
+      setStep(2)
     } catch (error) {
       console.error('Failed to create account:', error)
       // Still proceed for MVP
@@ -175,4 +172,6 @@ export default function WorkerOnboardPage() {
     </div>
   )
 }
+
+
 

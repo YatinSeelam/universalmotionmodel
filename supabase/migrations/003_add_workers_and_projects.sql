@@ -32,3 +32,5 @@ CREATE INDEX IF NOT EXISTS idx_episodes_project_id ON episodes(project_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_project_id ON jobs(project_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_claimed_by_worker ON jobs(claimed_by_worker_id);
 
+
+

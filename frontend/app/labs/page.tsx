@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { apiFetch, API_URL } from '@/lib/api'
 
 export default function LabsPage() {
   const [name, setName] = useState('')
@@ -17,23 +17,19 @@ export default function LabsPage() {
     setSubmitting(true)
 
     try {
-      const res = await fetch(`${API_URL}/api/lab_requests`, {
+      const { data, error } = await apiFetch('/api/lab_requests', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ name, email, org, use_case: useCase }),
       })
 
-      if (res.ok) {
+      if (error) {
+        alert(error || 'Failed to submit request')
+      } else {
         setSubmitted(true)
         setName('')
         setEmail('')
         setOrg('')
         setUseCase('')
-      } else {
-        const data = await res.json()
-        alert(data.detail || 'Failed to submit request')
       }
     } catch (error) {
       console.error('Lab request error:', error)

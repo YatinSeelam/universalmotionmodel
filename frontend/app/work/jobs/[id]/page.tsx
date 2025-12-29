@@ -3,9 +3,11 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { WorkerDashboardNav } from '@/components/DashboardNav'
+import { AppShell } from '@/components/app-shell/AppShell'
+import { ContentContainer } from '@/components/app-shell/ContentContainer'
+import { ShellHeader } from '@/components/app-shell/ShellHeader'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+import { apiFetch, API_URL } from '@/lib/api'
 
 interface JobDetail {
   id: string
@@ -58,8 +60,8 @@ export default function JobDetailPage() {
   const [loading, setLoading] = useState(true)
   const [claiming, setClaiming] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [showFixForm, setShowFixForm] = useState(false)
   
+  // Auto-fill from original episode
   const [durationSec, setDurationSec] = useState(8)
   const [hz, setHz] = useState(20)
   const [fixVideo, setFixVideo] = useState<File | null>(null)
@@ -69,6 +71,14 @@ export default function JobDetailPage() {
   useEffect(() => {
     fetchJob()
   }, [jobId])
+
+  // Auto-fill defaults when job loads
+  useEffect(() => {
+    if (job?.episode) {
+      setDurationSec(job.episode.duration_sec || 8)
+      setHz(job.episode.hz || 20)
+    }
+  }, [job])
 
   useEffect(() => {
     if (videoRef.current && job?.episode.failure_time_sec !== null && job?.episode.failure_time_sec !== undefined) {
@@ -82,22 +92,20 @@ export default function JobDetailPage() {
   }, [job])
 
   const fetchJob = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/jobs/${jobId}`)
-      const data = await res.json()
+    const { data, error } = await apiFetch(`/api/jobs/${jobId}`)
+    if (error) {
+      setJob(null)
+    } else {
       setJob(data)
-    } catch (error) {
-      console.error('Failed to fetch job:', error)
-    } finally {
-      setLoading(false)
     }
+    setLoading(false)
   }
 
   const handleClaim = async () => {
     setClaiming(true)
     try {
-      const res = await fetch(`${API_URL}/api/jobs/${jobId}/claim`, { method: 'POST' })
-      if (res.ok) {
+      const { data, error } = await apiFetch(`/api/jobs/${jobId}/claim`, { method: 'POST' })
+      if (!error && data) {
         fetchJob()
       }
     } catch (error) {
@@ -162,28 +170,22 @@ export default function JobDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white">
-        <WorkerDashboardNav />
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="flex items-center justify-center py-20">
-            <div className="text-center">
-              <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-slate-600" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Loading...</p>
-            </div>
+      <ContentContainer>
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-slate-600" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Loading...</p>
           </div>
         </div>
-      </div>
+      </ContentContainer>
     )
   }
 
   if (!job) {
     return (
-      <div className="min-h-screen bg-white">
-        <WorkerDashboardNav />
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <p className="text-slate-600" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Job not found</p>
-        </div>
-      </div>
+      <ContentContainer>
+        <p className="text-slate-600" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Job not found</p>
+      </ContentContainer>
     )
   }
 
@@ -192,25 +194,26 @@ export default function JobDetailPage() {
   const markerPositionPct = failureTime !== null && duration > 0 ? (failureTime / duration) * 100 : 0
 
   return (
-    <div className="min-h-screen bg-white">
-      <WorkerDashboardNav />
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="mb-5 flex items-center justify-between">
-          <div>
-            <Link href="/work/queue" className="text-xs text-slate-500 hover:text-[#8350e8] mb-1.5 inline-block" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>
-              ← Back to Queue
-            </Link>
-            <h1 className="text-xl font-medium text-slate-900 mb-1" style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}>Job Detail</h1>
-            <p className="text-sm text-slate-500" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>Task: {job.task_id}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <StatusBadge status={job.status} />
-            {job.lab_name && (
-              <span className="text-xs px-2 py-0.5 bg-slate-50 text-slate-700 rounded border border-slate-200" style={{ fontFamily: "'Archivo', sans-serif" }}>
-                {job.lab_name}
-              </span>
-            )}
-          </div>
+    <AppShell type="work">
+      <ContentContainer>
+        <div className="mb-5">
+          <Link href="/work/queue" className="text-xs text-slate-500 hover:text-[#8350e8] mb-1.5 inline-block" style={{ fontFamily: "'Rethink Sans', sans-serif" }}>
+            ← Back to Queue
+          </Link>
+          <ShellHeader 
+            title="Job Detail"
+            description={`Task: ${job.task_id}`}
+            actions={
+              <div className="flex items-center gap-2">
+                <StatusBadge status={job.status} />
+                {job.lab_name && (
+                  <span className="text-xs px-2 py-0.5 bg-slate-50 text-slate-700 rounded border border-slate-200" style={{ fontFamily: "'Archivo', sans-serif" }}>
+                    {job.lab_name}
+                  </span>
+                )}
+              </div>
+            }
+          />
         </div>
 
         <div className="bg-white border border-slate-200/60 rounded-lg p-5 mb-4">
@@ -276,31 +279,23 @@ export default function JobDetailPage() {
             </div>
           </div>
 
-          {(job.status === 'open' || job.status === 'claimed') && (
-            <div className="flex gap-3">
-              {job.status === 'open' && (
-                <button
-                  onClick={handleClaim}
-                  disabled={claiming}
-                  className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 font-medium transition-colors"
-                  style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}
-                >
-                  {claiming ? 'Claiming...' : 'Claim Job'}
-                </button>
-              )}
+          {(job.status === 'open' || job.status === 'claimed') && job.status === 'open' && (
+            <div className="mb-4">
               <button
-                onClick={() => setShowFixForm(!showFixForm)}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
+                onClick={handleClaim}
+                disabled={claiming}
+                className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50 font-medium transition-colors"
                 style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}
               >
-                {showFixForm ? 'Cancel' : 'Submit Fix'}
+                {claiming ? 'Claiming...' : 'Claim Job'}
               </button>
             </div>
           )}
 
-          {showFixForm && (
+          {/* Fix Form - Always Visible */}
+          {(job.status === 'open' || job.status === 'claimed') && (
             <form onSubmit={handleSubmitFix} className="mt-5 pt-5 border-t border-slate-200/60">
-              <h3 className="text-sm font-semibold text-slate-900 mb-4" style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}>Submit Fix</h3>
+              <h3 className="text-base font-semibold text-slate-900 mb-4" style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}>Submit Fix</h3>
               <div className="space-y-3">
                 <div>
                   <label className="block text-xs font-medium text-slate-500 uppercase tracking-wider mb-1.5" style={{ fontFamily: "'Archivo', sans-serif" }}>
@@ -357,7 +352,7 @@ export default function JobDetailPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium transition-colors"
+                  className="w-full px-6 py-3 bg-[#8350e8] text-white rounded-lg hover:bg-[#8350e8]/90 disabled:opacity-50 font-medium transition-colors text-base"
                   style={{ fontFamily: "'Archivo', sans-serif", letterSpacing: '-0.02em' }}
                 >
                   {submitting ? 'Submitting...' : 'Submit Fix'}
@@ -382,7 +377,7 @@ export default function JobDetailPage() {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </ContentContainer>
+    </AppShell>
   )
 }
